@@ -235,7 +235,35 @@ const FormSchema = new mongoose.Schema({
   chassisTenantAssignments: [{
     chassisNumber: String,
     assignedTenants: [String]
-  }]
+  }],
+  autoSendConfig: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    includePdf: {
+      type: Boolean,
+      default: false
+    },
+    includeLink: {
+      type: Boolean,
+      default: false
+    },
+    status: {
+      type: String,
+      enum: ['active', 'paused', 'stopped'],
+      default: 'stopped'
+    },
+    recipients: [{
+      type: {
+        type: String,
+        enum: ['email', 'whatsapp']
+      },
+      value: String // Email address or phone number
+    }],
+    lastSent: Date,
+    nextScheduledTime: Date
+  }
 }, {
   timestamps: true
 });

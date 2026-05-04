@@ -94,7 +94,7 @@ export const uploadAnalyticsInvites = async (req, res) => {
 export const sendAnalyticsInvites = async (req, res) => {
   try {
     const { formId } = req.params;
-    const { invites, channels = ['email'], customMessage, pdfHtml } = req.body;
+    const { invites, channels = ['email'], customMessage, pdfHtml, shareMode = 'both' } = req.body;
     
     if (!Array.isArray(invites) || invites.length === 0) {
       return res.status(400).json({ success: false, message: 'Invites array is required' });
@@ -105,11 +105,14 @@ export const sendAnalyticsInvites = async (req, res) => {
     
     const tenant = await Tenant.findById(form.tenantId);
 
+    const includeLink = shareMode === 'link' || shareMode === 'both';
+    const includePdf = shareMode === 'pdf' || shareMode === 'both';
+
     // Handle PDF generation if pdfHtml is provided
     let pdfAttachment = null;
-    console.log('📩 SendAnalyticsInvites called with pdfHtml:', !!pdfHtml, pdfHtml?.length || 0);
+    console.log('📩 SendAnalyticsInvites called with pdfHtml:', !!pdfHtml, pdfHtml?.length || 0, 'shareMode:', shareMode);
     
-    if (pdfHtml && channels.includes('email')) {
+    if (pdfHtml && channels.includes('email') && includePdf) {
       try {
         console.log('📄 Generating PDF for email attachment...');
         const pdfBuffer = await pdfService.generatePDFWithA4Portrait(pdfHtml);
@@ -161,7 +164,7 @@ export const sendAnalyticsInvites = async (req, res) => {
       let smsSent = false;
 
       if (channels.includes('email')) {
-        const mailResult = await mailService.sendAnalyticsInvite(email, form.title, inviteLink, otp, tenant.name, customMessage, false, pdfAttachment);
+        const mailResult = await mailService.sendAnalyticsInvite(email, form.title, inviteLink, otp, tenant.name, customMessage, false, pdfAttachment, includeLink);
         emailSent = mailResult.success;
         if (!emailSent) {
           console.error(`Failed to send email to ${email}:`, mailResult.error);
@@ -170,7 +173,7 @@ export const sendAnalyticsInvites = async (req, res) => {
       
       if (channels.includes('whatsapp') && phone) {
         // Don't send OTP in the initial invite as per user request
-        const waResult = await WhatsAppService.sendAnalyticsInvite(phone, form.title, inviteLink, null, tenant.name, email, customMessage, false);
+        const waResult = await WhatsAppService.sendAnalyticsInvite(phone, form.title, inviteLink, null, tenant.name, email, customMessage, false, includeLink);
         whatsappSent = waResult.success;
         if (!whatsappSent) {
           console.error(`Failed to send WhatsApp to ${phone}:`, waResult.error);

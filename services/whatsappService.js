@@ -283,7 +283,7 @@ Thank you!
   }
 
   // Send analytics dashboard invite via WhatsApp
-  async sendAnalyticsInvite(phone, formTitle, inviteLink, otp, tenantName, email, customMessage = "", isOTPRequest = false) {
+  async sendAnalyticsInvite(phone, formTitle, inviteLink, otp, tenantName, email, customMessage = "", isOTPRequest = false, includeLink = true) {
     try {
       if (!this.isConfigured) {
         return { success: false, error: 'Twilio WhatsApp service not configured' };
@@ -308,12 +308,12 @@ Thank you!
             .substring(0, max);
         };
 
-        let v1 = String(inviteLink || "").trim();
+        let v1 = includeLink ? String(inviteLink || "").trim() : "Analytics Report (See Email)";
         const v2 = safe(tenantName || '3W-WHEELER', 60);
         const v3 = safe(formTitle || 'Analytics', 150);
         
         // FIX: WhatsApp rejects localhost links. Replace with a valid domain for testing if needed.
-        if (v1.includes('localhost') || v1.includes('127.0.0.1')) {
+        if (includeLink && (v1.includes('localhost') || v1.includes('127.0.0.1'))) {
           console.warn('⚠️ WARNING: Localhost link detected. Replacing with placeholder to avoid Error 63005.');
           v1 = 'https://3wheelertvs.focusengineeringapp.com/analytics-placeholder/';
         }
@@ -385,8 +385,7 @@ Hello! You have been invited by *${tenantName}* to view the analytics for the fo
 *${formTitle}*
 
 ${customMessage ? `_"${customMessage}"_\n` : ""}
-Click the link below to view the dashboard:
-${inviteLink}
+${includeLink ? `Click the link below to view the dashboard:\n${inviteLink}` : "Please check your email for the detailed PDF report."}
 
 Thank you!
         `.trim();

@@ -40,6 +40,10 @@ import messageRoutes from './routes/messageRoutes.js';
 // Connect to database
 await connectDB();
 
+// Initialize AutoSend cron job
+import { initAutoSendJob } from './services/autoSendService.js';
+initAutoSendJob();
+
 const app = express();
 
 // Set server timeout for file uploads (default 10 minutes, configurable via env)

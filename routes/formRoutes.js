@@ -29,6 +29,11 @@ import {
   startFormSession
 } from '../controllers/formController.js';
 import {
+  updateAutoSendConfig,
+  getAutoSendConfig,
+  getAutoSendHistory
+} from '../controllers/autoSendController.js';
+import {
   authenticate,
   authenticateOptional,
   adminOnly,
@@ -135,6 +140,12 @@ router.put('/:id/child-forms/reorder', reorderChildForms);
 router.post('/:id/section-branching', setSectionBranching);
 router.get('/:id/section-branching', getSectionBranching);
 router.get('/:id/section-branching/public/:tenantSlug', getSectionBranchingPublic);
+
+// AutoSend routes
+router.put('/:id/autosend/config', updateAutoSendConfig);
+router.get('/:id/autosend/config', getAutoSendConfig);
+router.get('/:id/autosend/history', getAutoSendHistory);
+
 // Form invite routes
 router.use('/:formId/invites', formInviteRoutes);
 

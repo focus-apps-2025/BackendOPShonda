@@ -329,7 +329,7 @@ class MailService {
   }
 
   // Send analytics dashboard invite
-  async sendAnalyticsInvite(recipientEmail, formTitle, inviteLink, otp, tenantName, customMessage, isOTPRequest = false, pdfAttachment = null) {
+  async sendAnalyticsInvite(recipientEmail, formTitle, inviteLink, otp, tenantName, customMessage, isOTPRequest = false, pdfAttachment = null, includeLink = true) {
     try {
       console.log('📧 Sending analytics invite to:', recipientEmail);
 
@@ -338,7 +338,9 @@ class MailService {
         <p style="font-size: 15px; color: #374151; margin: 0 0 20px;">
           ${isOTPRequest 
             ? `Your verification code for <strong>${tenantName}</strong> analytics is below.`
-            : `You have been invited by <strong>${tenantName}</strong> to view the analytics for the following form:`
+            : pdfAttachment && !includeLink
+              ? `Please find the analytics report for <strong>${formTitle}</strong> attached to this email.`
+              : `You have been invited by <strong>${tenantName}</strong> to view the analytics for the following form:`
           }
         </p>
 
@@ -360,20 +362,22 @@ class MailService {
           <p style="margin: 4px 0; color: #111827;"><strong>Code:</strong> <span style="font-size: 24px; font-weight: bold; color: #b45309; letter-spacing: 2px;">${otp}</span></p>
           <p style="font-size: 12px; color: #92400e; margin-top: 8px;">Note: This code will expire in 5 minutes.</p>
         </div>
-        ` : `
+        ` : includeLink ? `
         <div style="text-align: center; margin: 28px 0;">
           <a href="${inviteLink}" 
              style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 16px; transition: background-color 0.2s;">
             View Analytics Dashboard
           </a>
         </div>
-        `}
+        ` : ''}
 
         <p style="font-size: 14px; color: #6b7280; line-height: 1.5;">
           ${isOTPRequest 
             ? 'If you did not request this code, please ignore this email.'
-            : `If the button above doesn't work, copy and paste this link into your browser:<br>
-               <span style="color: #2563eb; word-break: break-all;">${inviteLink}</span>`
+            : includeLink 
+              ? `If the button above doesn't work, copy and paste this link into your browser:<br>
+                 <span style="color: #2563eb; word-break: break-all;">${inviteLink}</span>`
+              : ''
           }
         </p>
 
