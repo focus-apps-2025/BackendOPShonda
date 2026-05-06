@@ -2068,6 +2068,11 @@ export const getInspectorSummary = async (req, res) => {
       } else {
         stats.statusCounts[status] = (stats.statusCounts[status] || 0) + 1;
       }
+
+      // Increment Dispatched count separately if it's dispatched
+      if (r.isDispatched) {
+        stats.statusCounts['Dispatched']++;
+      }
     }
 
     // Join with User, Tenant, and Shift details

@@ -171,6 +171,13 @@ const ResponseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tenant',
     required: true
+  },
+  isDispatched: {
+    type: Boolean,
+    default: false
+  },
+  dispatchedAt: {
+    type: Date
   }
 }, {
   timestamps: true
