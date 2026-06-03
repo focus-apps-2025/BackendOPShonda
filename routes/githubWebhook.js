@@ -20,10 +20,10 @@ router.post("/", (req, res) => {
     return res.status(401).send({ success: false, message: "Invalid signature" });
   }
 
-  res.status(200).send({ success: true, message: "Deployment triggered" });
+  res.status(200).send({ success: true, message: "Deployment triggered..." });
 
   // Async deploy
-  exec("cd /var/www/3w-wheeler-backend && git fetch origin main && git reset --hard origin/main && npm ci --omit=dev && pm2 restart 3w-wheeler-backend",
+  exec("cd /var/www/BackendOPShonda && git fetch origin main && git reset --hard origin/main && npm ci --omit=dev && pm2 restart BackendOPShonda",
     (err, stdout, stderr) => {
       if (err) return console.error("❌ Deployment failed:", err);
       console.log("✅ Deployment complete:\n", stdout);
