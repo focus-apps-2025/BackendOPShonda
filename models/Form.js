@@ -200,6 +200,10 @@ const FormSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isOPS: {
+    type: Boolean,
+    default: false
+  },
   sharedWithTenants: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tenant'

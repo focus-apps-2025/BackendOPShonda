@@ -15,7 +15,7 @@ class PDFService {
     this.initializationPromise = (async () => {
       try {
         console.log('🚀 Launching Puppeteer...');
-        
+
         const launchOptions = {
           headless: true,
           args: [
@@ -44,7 +44,7 @@ class PDFService {
             'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
             'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
           ];
-          
+
           for (const path of possiblePaths) {
             if (fs.existsSync(path)) {
               console.log(`💡 Found fallback browser at: ${path}`);
@@ -62,7 +62,7 @@ class PDFService {
 
         this.initialized = true;
         console.log('✅ Puppeteer ready');
-        
+
         // Handle browser disconnect
         this.browser.on('disconnected', () => {
           console.log('⚠️ Browser disconnected');
@@ -98,50 +98,84 @@ class PDFService {
     return this.browser;
   }
 
+  async generateOPSPDF(htmlContent) {
+    let browser = null;
+
+    try {
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+
+      const page = await browser.newPage();
+
+      await page.setContent(htmlContent, {
+        waitUntil: 'networkidle0',
+        timeout: 30000
+      });
+
+      // OPS SPECIFIC: ZERO margins for A3 Landscape
+      const pdfBuffer = await page.pdf({
+        format: 'A3',
+        landscape: true,
+        printBackground: true,
+        margin: { top: '0mm', bottom: '0mm', left: '4mm', right: '0mm' },  // ← ZERO margins
+        preferCSSPageSize: true  // ← Respect CSS @page rules
+      });
+
+      return pdfBuffer;
+
+    } catch (error) {
+      console.error('OPS PDF generation error:', error);
+      throw error;
+    } finally {
+      if (browser) await browser.close();
+    }
+  }
   async generatePDF(htmlContent, options = {}) {
     console.log('🚀 Starting PDF generation...');
     console.log(`📊 HTML size: ${(htmlContent.length / 1024).toFixed(2)} KB`);
-    
+
     let browser = null;
     let page = null;
-    
+
     try {
       // Get or create browser
       console.log('📋 Getting browser instance...');
       browser = await this.getBrowser();
       console.log('✅ Browser acquired');
-      
+
       // Create a fresh page for each request
       console.log('📄 Creating new page...');
       page = await browser.newPage();
       console.log('✅ Page created');
-      
+
       // Prepare HTML (removes problematic elements)
       console.log('🧹 Preparing HTML...');
       const processedHTML = this.prepareHTMLForPDF(htmlContent);
       console.log(`✅ HTML prepared: ${processedHTML.length} chars`);
-      
+
       console.log('📝 Setting HTML content...');
-      
+
       // Set content with timeout
       await page.setContent(processedHTML, {
         waitUntil: 'domcontentloaded',
         timeout: 100000 // Increased timeout for large content
       });
-      
+
       console.log('✅ HTML content loaded');
-      
+
       // Wait for rendering
       console.log('⏳ Waiting for page render...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       console.log('✅ Page rendered');
-      
+
       // Set page format based on options
       const format = options.format || 'custom'; // custom, a4, or a4-portrait
       const margin = options.margin || { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' };
-      
+
       console.log(`📐 Generating PDF with format: ${format}`);
-      
+
       let pdfOptions = {
         printBackground: true,
         margin: margin,
@@ -149,7 +183,7 @@ class PDFService {
         preferCSSPageSize: false,
         timeout: 100000 // Increased timeout for large PDFs
       };
-      
+
       // Apply format
       if (format === 'custom') {
         // Custom format: 279.4mm x 157.1mm (landscape)
@@ -164,34 +198,34 @@ class PDFService {
         pdfOptions.format = 'A4';
         pdfOptions.landscape = true;
       }
-      
+
       console.log('📄 Generating PDF buffer...');
       console.log('PDF Options:', JSON.stringify(pdfOptions, null, 2));
-      
+
       const pdfBuffer = await page.pdf(pdfOptions).catch(err => {
         console.error('❌ page.pdf error:', err.message);
         throw new Error(`Puppeteer PDF generation failed: ${err.message}`);
       });
-      
+
       console.log(`✅ PDF generated: ${(pdfBuffer.length / 1024).toFixed(2)} KB`);
       return pdfBuffer;
-      
+
     } catch (error) {
       console.error('❌ PDF generation error:', error.message);
       console.error('❌ Full error:', error);
       console.error('❌ Stack:', error.stack);
-      
+
       // Try with fresh browser instance
       if (browser) {
         try {
           await browser.close();
-        } catch (e) {}
+        } catch (e) { }
         this.browser = null;
         this.initialized = false;
       }
-      
+
       throw error;
-      
+
     } finally {
       if (page) {
         try {
@@ -202,6 +236,7 @@ class PDFService {
       }
     }
   }
+
 
   // Method for A4 format (for backward compatibility)
   async generatePDFWithA4(htmlContent) {
@@ -221,21 +256,55 @@ class PDFService {
     return this.generatePDF(htmlContent, { format: 'custom' });
   }
 
+  async generateOPSPDF(htmlContent) {
+    let browser = null;
+
+    try {
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+
+      const page = await browser.newPage();
+
+      await page.setContent(htmlContent, {
+        waitUntil: 'networkidle0',
+        timeout: 30000
+      });
+
+      // OPS SPECIFIC: ZERO margins for A3 Landscape
+      const pdfBuffer = await page.pdf({
+        format: 'A3',
+        landscape: true,
+        printBackground: true,
+        margin: { top: '0mm', bottom: '0mm', left: '0mm', right: '0mm' },  // ← ZERO margins
+        preferCSSPageSize: true  // ← Respect CSS @page rules
+      });
+
+      return pdfBuffer;
+
+    } catch (error) {
+      console.error('OPS PDF generation error:', error);
+      throw error;
+    } finally {
+      if (browser) await browser.close();
+    }
+  }
   prepareHTMLForPDF(htmlContent) {
     console.log('🧹 Preparing HTML for PDF generation...');
-    
+
     let processed = htmlContent;
-    
+
     // 1. Ensure DOCTYPE
     if (!processed.includes('<!DOCTYPE')) {
       processed = '<!DOCTYPE html>' + processed;
     }
-    
+
     // 2. Ensure complete HTML structure
     if (!processed.includes('<html')) {
       processed = '<html><head><meta charset="UTF-8"></head><body>' + processed + '</body></html>';
     }
-    
+
     // 3. Add CSS for better PDF rendering
     const pdfCSS = `
       <style>
@@ -298,14 +367,14 @@ class PDFService {
         }
       </style>
     `;
-    
+
     // Add CSS to head
     if (processed.includes('</head>')) {
       processed = processed.replace('</head>', pdfCSS + '</head>');
     } else if (processed.includes('<body>')) {
       processed = processed.replace('<body>', '<head>' + pdfCSS + '</head><body>');
     }
-    
+
     console.log(`📊 HTML processed: ${htmlContent.length} → ${processed.length} chars`);
     return processed;
   }
@@ -325,6 +394,7 @@ class PDFService {
     }
   }
 }
+
 
 // Export instance
 const pdfServiceInstance = new PDFService();

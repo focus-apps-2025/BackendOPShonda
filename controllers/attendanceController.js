@@ -22,6 +22,12 @@ const getISTToday = () => {
   return istNow;
 };
 
+const getISTDate = () => {
+  const istNow = getISTNow();
+  istNow.setHours(0, 0, 0, 0);
+  return istNow;
+};
+
 // Helper to convert HH:mm to minutes
 const toMins = (t) => {
   if (!t) return null;
@@ -32,9 +38,11 @@ const toMins = (t) => {
 /**
  * Centered Shift Detection Logic with Buffer
  */
+
+
 const findShiftByTime = (currentMins, shifts, bufferMins = 15) => {
   console.log(`findShiftByTime - currentMins: ${currentMins}, shiftsCount: ${shifts.length}, buffer: ${bufferMins}`);
-  
+
   return shifts.find(s => {
     const startMins = toMins(s.startTime);
     const endMins = toMins(s.endTime);
@@ -42,7 +50,7 @@ const findShiftByTime = (currentMins, shifts, bufferMins = 15) => {
 
     // Buffer allows checking in slightly before the shift starts
     const bufferedStart = (startMins - bufferMins + 1440) % 1440;
-    
+
     let isMatch = false;
     if (isNight) {
       if (bufferedStart > endMins) {
@@ -71,7 +79,7 @@ export const checkIn = async (req, res) => {
     const { lat, lng, accuracy, otp } = req.body;
     const inspectorId = req.user._id;
     const tenantId = req.user.tenantId;
-    
+
     // Verify OTP if provided
     if (otp) {
       const user = await User.findById(inspectorId);
@@ -104,9 +112,9 @@ export const checkIn = async (req, res) => {
     const shift = findShiftByTime(currentMins, allShifts, 15); // 15 mins buffer
 
     if (!shift) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'No shift available for current time. Contact admin.' 
+      return res.status(400).json({
+        success: false,
+        message: 'No shift available for current time. Contact admin.'
       });
     }
 
@@ -187,7 +195,7 @@ export const checkOut = async (req, res) => {
     const { lat, lng, accuracy } = req.body;
     const inspectorId = req.user._id;
     const tenantId = req.user.tenantId;
-    const now = getISTDate();
+    const now = getISTNow();
     const today = getISTToday();
 
     const attendance = await Attendance.findOne({
@@ -203,11 +211,15 @@ export const checkOut = async (req, res) => {
 
     const place = await reverseGeocode(lat, lng);
 
-    attendance.checkOutTime = new Date();
+    attendance.checkOutTime = now;
     attendance.checkOutLat = lat;
     attendance.checkOutLng = lng;
     attendance.checkOutPlace = place || 'Position Captured';
     attendance.checkOutAccuracy = accuracy;
+
+    // Calculate working hours
+    const workingHoursMs = attendance.checkOutTime - attendance.checkInTime;
+    attendance.workingHours = parseFloat((workingHoursMs / (1000 * 60 * 60)).toFixed(2));
 
     const shiftEndStr = attendance.shiftEndTime || attendance.shift.endTime;
     const currentMins = now.getHours() * 60 + now.getMinutes();
@@ -217,13 +229,13 @@ export const checkOut = async (req, res) => {
       attendance.isEarlyCheckout = true;
     }
 
-    await attendance.save();
-
+    // Update status based on working hours
     if (attendance.workingHours < 4) {
       attendance.status = 'half-day';
       attendance.isHalfDay = true;
-      await attendance.save();
     }
+
+    await attendance.save();
 
     res.json({ success: true, data: attendance });
   } catch (error) {
@@ -515,25 +527,25 @@ export const sendAttendanceOTP = async (req, res) => {
   try {
     const user = req.user;
     const mobile = user.mobile;
-    
+
     if (!mobile) {
       return res.status(400).json({ success: false, message: 'No mobile number registered' });
     }
-    
+
     // Generate 4-digit OTP
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    
+
     // Save OTP to user
     user.attendanceOTP = otp;
     await user.save();
-    
+
     // Send OTP via SMS
     const result = await smsService.sendOTP(mobile, otp);
-    
+
     if (!result.success) {
       return res.status(500).json({ success: false, message: 'Failed to send OTP' });
     }
-    
+
     res.json({ success: true, message: 'OTP sent to your mobile number' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
