@@ -17,6 +17,7 @@ import {
   autoAssignResponse,
   getSuggestedAnswers,
   getQuestionPreviousAnswers,
+  getResponsesByModel,
 } from '../controllers/responseController.js';
 import { getReviewsForResponse } from '../controllers/userController.js';
 import {
@@ -163,6 +164,9 @@ router.get('/:tenantSlug/forms/:formId/suggestions', getSuggestedAnswers);
 // 9. GET PREVIOUS ANSWERS (PUBLIC)
 router.get('/previous-answers', getQuestionPreviousAnswers);
 router.get('/:tenantSlug/forms/:formId/previous-answers', getQuestionPreviousAnswers);
+// 10. GET RESPONSES BY MODEL NUMBER (PUBLIC)
+router.get('/form/:formId/responses/by-model', getResponsesByModel);
+router.get('/:tenantSlug/forms/:formId/responses/by-model', getResponsesByModel);
 
 
 

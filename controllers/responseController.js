@@ -1896,7 +1896,14 @@ export const updateResponse = async (req, res) => {
 
     console.log('Updating response:', { id, answers: !!answers, notes, status, tenantFilter: req.tenantFilter });
 
-    const response = await Response.findOne({ id, ...req.tenantFilter });
+    let query = { ...req.tenantFilter };
+    if (mongoose.isValidObjectId(id)) {
+      query.$or = [{ id: id }, { _id: id }];
+    } else {
+      query.id = id;
+    }
+
+    const response = await Response.findOne(query);
 
     console.log('Found response:', !!response, response?._id);
 
@@ -1992,7 +1999,13 @@ export const assignResponse = async (req, res) => {
     const { id } = req.params;
     const { assignedTo } = req.body;
 
-    const response = await Response.findOne({ id, ...req.tenantFilter });
+    let query = { ...req.tenantFilter };
+    if (mongoose.isValidObjectId(id)) {
+      query.$or = [{ id: id }, { _id: id }];
+    } else {
+      query.id = id;
+    }
+    const response = await Response.findOne(query);
 
     if (!response) {
       return res.status(404).json({
@@ -2032,7 +2045,13 @@ export const deleteResponse = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const response = await Response.findOne({ id, ...req.tenantFilter });
+    let query = { ...req.tenantFilter };
+    if (mongoose.isValidObjectId(id)) {
+      query.$or = [{ id: id }, { _id: id }];
+    } else {
+      query.id = id;
+    }
+    const response = await Response.findOne(query);
 
     if (!response) {
       return res.status(404).json({
@@ -2042,7 +2061,7 @@ export const deleteResponse = async (req, res) => {
     }
 
     const questionId = response.questionId;
-    await Response.findOneAndDelete({ id, ...req.tenantFilter });
+    await Response.findOneAndDelete(query);
 
     // Emit real-time event for deleted response
     emitResponseDeleted(questionId, id);
@@ -2616,3 +2635,45 @@ export const autoAssignResponse = async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
+
+// ── Get responses by model number (for historical display in OPS template) ──
+export const getResponsesByModel = async (req, res) => {
+  try {
+    const { formId } = req.params;
+    const { modelNumber, modelQuestionId } = req.query;
+
+    if (!formId || !modelNumber || !modelQuestionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'formId, modelNumber, and modelQuestionId are required query parameters'
+      });
+    }
+
+    // Build query to find all final (non-section-partial) responses for this form
+    // where the model question answer matches the given modelNumber
+    const query = {
+      questionId: formId,
+      isSectionSubmit: { $ne: true },
+      [`answers.${modelQuestionId}`]: { $regex: new RegExp(`^${modelNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    };
+
+    const responses = await Response.find(query)
+      .sort({ createdAt: 1 })
+      .select('answers createdAt submittedBy')
+      .lean();
+
+    // Convert Map answers to plain objects (Mongoose Map → JS object)
+    const formattedResponses = responses.map(r => ({
+      ...r,
+      answers: r.answers instanceof Map ? Object.fromEntries(r.answers) : r.answers
+    }));
+
+    return res.json({
+      success: true,
+      data: formattedResponses
+    });
+  } catch (error) {
+    console.error('[getResponsesByModel] error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
