@@ -167,7 +167,7 @@ router.get('/:tenantSlug/forms/:formId/previous-answers', getQuestionPreviousAns
 // 10. GET RESPONSES BY MODEL NUMBER (PUBLIC)
 router.get('/form/:formId/responses/by-model', getResponsesByModel);
 router.get('/:tenantSlug/forms/:formId/responses/by-model', getResponsesByModel);
-console.log('the by-model')
+console.log('thesss by-model')
 
 
 
